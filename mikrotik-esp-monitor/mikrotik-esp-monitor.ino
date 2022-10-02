@@ -16,7 +16,7 @@ int id;
 //bool watchdog; //watchdog alternates between true and false every second or so to display the active connection (it stops when there is no Data flowing)
 int clients, temp, volt, cpuLoad;
 
-float rx, tx, rxSpeed, currentRx, lastRx, txSpeed, currentTx, lastTx, ram;
+float rx, tx, rxSpeed, currentRx, lastRx, txSpeed, currentTx, lastTx, ram, ramPercent, ramUsage, ramUsagePercent;
 
 ESP8266WebServer server(80); //you can define the Server Port here. Default is 80(HTTP)
 
@@ -169,22 +169,25 @@ void dataPrep() {
   clients = values[1].toInt();
   temp = values[2].toInt();
   volt = values[3].toInt();
-  
+
   if (id == 4) {
     rx = floatProcessing(values[4]);
     currentRx = rx;
     rxSpeed = currentRx - lastRx;
     lastRx = currentRx;
   }
-  if (id == 5){
+  if (id == 5) {
     tx = floatProcessing(values[5]);
     currentTx = tx;
     txSpeed = currentTx - lastTx;
     lastTx = currentTx;
   }
-  
+
   cpuLoad = values[6].toInt();
   ram = values[7].toFloat() / 1048576;
+  ramUsage = 256.00 - ram;
+  ramPercent = (ram / 256.00) * 100;
+  ramUsagePercent = (ramUsage / 256.00 ) * 100;
 
 }
 
@@ -218,15 +221,18 @@ void printOutData() {
   Serial.println();
   Serial.println("===============================================");
   Serial.print("Millis      : "); Serial.println(millis() / 1000);
-  Serial.print("DHCP Client : "); Serial.print(clients);  Serial.println(" Clients");
-  Serial.print("Temp        : "); Serial.print(temp);     Serial.println(" C");
-  Serial.print("Volt        : "); Serial.print(volt);     Serial.println(" Volts");
+  Serial.print("DHCP Client : "); Serial.print(clients);                  Serial.println(" Clients");
+  Serial.print("Temp        : "); Serial.print(temp);                     Serial.println(" C");
+  Serial.print("Volt        : "); Serial.print(volt);                     Serial.println(" Volts");
   Serial.print("RX Bytes    : "); Serial.print(rx / 1000000000.00);       Serial.println(" GB");
-  Serial.print("RX Speed    : "); Serial.print(rxSpeed / 1000000.00);       Serial.println(" MB/s");
+  Serial.print("RX Speed    : "); Serial.print(rxSpeed / 1000000.00);     Serial.println(" MB/s");
   Serial.print("TX Bytes    : "); Serial.print(tx / 1000000000.00);       Serial.println(" GB");
   Serial.print("TX Speed    : "); Serial.print(txSpeed / 1000000.00);     Serial.println(" MB/s");
-  Serial.print("CPU Load    : "); Serial.print(cpuLoad);  Serial.println(" %");
-  Serial.print("Free RAM    : "); Serial.print(ram);      Serial.println(" MB");
+  Serial.print("CPU Load    : "); Serial.print(cpuLoad);                  Serial.println(" %");
+  Serial.print("Free RAM    : "); Serial.print(ram);                      Serial.println(" MB");
+  Serial.print("RAM Usage   : "); Serial.print(ramUsage);                 Serial.println(" MB");
+  Serial.print("Free Ram %  : "); Serial.print(ramPercent);               Serial.println(" %");
+  Serial.print("Ram usage % : "); Serial.print(ramUsagePercent);          Serial.println(" %");
   Serial.print("Uptime      : "); Serial.println(values[8]);
   //  Serial.println("Clients : " + values[1] + " Clients");    //Display the Value No.1
   //  Serial.println("Temp    : " + values[2] + " C");//Display the Value No.2
