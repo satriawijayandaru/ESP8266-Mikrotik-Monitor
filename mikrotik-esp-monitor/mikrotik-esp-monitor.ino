@@ -232,7 +232,8 @@ void printOutData() {
   Serial.print("Free RAM    : "); Serial.print(ram);                      Serial.println(" MB");
   Serial.print("RAM Usage   : "); Serial.print(ramUsage);                 Serial.println(" MB");
   Serial.print("Free Ram %  : "); Serial.print(ramPercent);               Serial.println(" %");
-  Serial.print("Ram usage % : "); Serial.print(ramUsagePercent);          Serial.println(" %");
+  Serial.print("Ram usage % : "); Serial.print(ramUsagePercent);          
+  Serial.println(" %");
   Serial.print("Uptime      : "); Serial.println(values[8]);
   //  Serial.println("Clients : " + values[1] + " Clients");    //Display the Value No.1
   //  Serial.println("Temp    : " + values[2] + " C");//Display the Value No.2
