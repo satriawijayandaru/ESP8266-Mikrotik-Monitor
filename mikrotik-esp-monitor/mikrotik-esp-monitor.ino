@@ -12,10 +12,11 @@ const char* ssid = "XDA";
 const char* password = "namaguee";
 
 String values[50]; //Set max Array Size
-bool watchdog; //watchdog alternates between true and false every second or so to display the active connection (it stops when there is no Data flowing)
+int id;
+//bool watchdog; //watchdog alternates between true and false every second or so to display the active connection (it stops when there is no Data flowing)
 int clients, temp, volt, cpuLoad;
 
-float rx, tx, rxMiB, rxGiB, txMiB, txGiB, ram;
+float rx, tx, rxSpeed, currentRx, lastRx, txSpeed, currentTx, lastTx, ram;
 
 ESP8266WebServer server(80); //you can define the Server Port here. Default is 80(HTTP)
 
@@ -50,18 +51,12 @@ void setVars() {
 
         // Here store data or doing operation
 
-        watchdog = !watchdog; //alternate the watchdog value when data is received
+        //        watchdog = !watchdog; //alternate the watchdog value when data is received
 
         // Extract Data from Json to string array
-        int id = doc["id"];
+        //        int id = doc["id"];
+        id = doc["id"];
         String value = doc["value"]; //Extract the Value from Json
-        //
-        //        String valueStr;
-        //        char valueChar[50];
-        //        value.toCharArray(valueChar, 50);
-        //        Serial.print("to char array = ");
-        //
-        //        Serial.println(valueChar);
 
 
         values[id] = value;         //Write the value to the defined place in the array
@@ -123,11 +118,6 @@ void handleNotFound() {
   server.send(404, "text/plain", message);
 }
 
-
-
-
-
-
 void setup(void) {
   Serial.begin(500000);
 
@@ -167,54 +157,60 @@ void setup(void) {
 
 void loop(void) {
   server.handleClient();
-  delay(50); //adjust the delay for lower latency (100ms works good, 500ms is fine, 1000ms is a bit laggy)
-
-  //  String rxStr = values[4].trim();
-  //    int rx = (values[4].toInt()/1024)/1024);
-  //  int rx = values[4].toInt();
-  //  int tx = values[5].toInt();
-
-  //Write your own Stuff here or modify the Output
-  //  Serial.println(values[1]);
-  //  Serial.println(values[2]);
-  //  Serial.println(values[3]);
-  //  Serial.println(values[4]);
+  //  delay(50); //adjust the delay for lower latency (100ms works good, 500ms is fine, 1000ms is a bit laggy)
 
 
 }
 
 void dataPrep() {
   //int clients, temp, volt, rx, tx, cpuLoad, ram;
+  //float rx, tx, rxSpeed, txSpeed, ram;
+
   clients = values[1].toInt();
   temp = values[2].toInt();
   volt = values[3].toInt();
+  
+  if (id == 4) {
+    rx = floatProcessing(values[4]);
+    currentRx = rx;
+    rxSpeed = currentRx - lastRx;
+    lastRx = currentRx;
+  }
+  if (id == 5){
+    tx = floatProcessing(values[5]);
+    currentTx = tx;
+    txSpeed = currentTx - lastTx;
+    lastTx = currentTx;
+  }
+  
+  cpuLoad = values[6].toInt();
+  ram = values[7].toFloat() / 1048576;
 
+}
+
+float floatProcessing(String data) {
   //RX PROCESSING
   //================================================================
-  //  float rx, tx, rxMiB, rxGiB, txMiB, txGiB, ram;
-  String rxStr;
-//  int str_len = 18;
+  String toFloatStr;
   int str_len = values[4].length() + 1;
-  Serial.print("length = "); Serial.println(str_len);
+  //  Serial.println();
+  //  Serial.print("length = "); Serial.println(str_len);
   char rxChar[str_len];
-  values[4].toCharArray(rxChar, str_len);
-  Serial.println();
+  data.toCharArray(rxChar, str_len);
+  //  Serial.println();
   for (int i = 0; i < str_len; i++) {
     if (isDigit(rxChar[i])) {
-      rxStr += rxChar[i];
-      Serial.print("RX Char = ");
-      Serial.println(rxChar[i]);
+      toFloatStr += rxChar[i];
+      //      Serial.print("Received data = ");
+      //      Serial.println(rxChar[i]);
     }
   }
-  rx = rxStr.toFloat() / 1000000000.00;
-  Serial.print("Processed RX = ");
-  Serial.println(rx);
-  rxStr = "";
+  return toFloatStr.toFloat();
+
+  toFloatStr = "";
 
   //END OF RX PROCESSING
   //================================================================
-  cpuLoad = values[6].toInt();
-  ram = values[7].toFloat() / 1048576;
 }
 
 void printOutData() {
@@ -222,11 +218,13 @@ void printOutData() {
   Serial.println();
   Serial.println("===============================================");
   Serial.print("Millis      : "); Serial.println(millis() / 1000);
-  Serial.print("Clients     : "); Serial.print(clients);  Serial.println();
+  Serial.print("DHCP Client : "); Serial.print(clients);  Serial.println(" Clients");
   Serial.print("Temp        : "); Serial.print(temp);     Serial.println(" C");
   Serial.print("Volt        : "); Serial.print(volt);     Serial.println(" Volts");
-  Serial.print("WAN RX      : "); Serial.print(rx);       Serial.println(" GB");
-  Serial.print("WAN TX      : "); Serial.print(values[5]); Serial.println(" Bytes");
+  Serial.print("RX Bytes    : "); Serial.print(rx / 1000000000.00);       Serial.println(" GB");
+  Serial.print("RX Speed    : "); Serial.print(rxSpeed / 1000000.00);       Serial.println(" MB/s");
+  Serial.print("TX Bytes    : "); Serial.print(tx / 1000000000.00);       Serial.println(" GB");
+  Serial.print("TX Speed    : "); Serial.print(txSpeed / 1000000.00);     Serial.println(" MB/s");
   Serial.print("CPU Load    : "); Serial.print(cpuLoad);  Serial.println(" %");
   Serial.print("Free RAM    : "); Serial.print(ram);      Serial.println(" MB");
   Serial.print("Uptime      : "); Serial.println(values[8]);
