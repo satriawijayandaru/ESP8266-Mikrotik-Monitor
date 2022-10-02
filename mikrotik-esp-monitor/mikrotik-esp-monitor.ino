@@ -6,20 +6,20 @@
 #include <ESP8266mDNS.h>
 #include <ArduinoJson.h>
 
-
-// Enter WiFi Credentials here
 const char* ssid = "XDA";
 const char* password = "namaguee";
 
-String values[50]; //Set max Array Size
+String values[50]; //Maximum data from mikrotik
 int id;
-//bool watchdog; //watchdog alternates between true and false every second or so to display the active connection (it stops when there is no Data flowing)
+bool watchdog; //watchdog alternates between true and false every second or so to display the active connection (it stops when there is no Data flowing)
 int clients, temp, volt, cpuLoad;
 
 float rx, tx, rxSpeed, currentRx, lastRx, txSpeed, currentTx, lastTx, ram, ramPercent, ramUsage, ramUsagePercent;
 
-ESP8266WebServer server(80); //you can define the Server Port here. Default is 80(HTTP)
+unsigned long previousMillis = 0;
+const long interval = 50;
 
+ESP8266WebServer server(80); 
 
 
 void setVars() {
@@ -51,7 +51,7 @@ void setVars() {
 
         // Here store data or doing operation
 
-        //        watchdog = !watchdog; //alternate the watchdog value when data is received
+                watchdog = !watchdog; //alternate the watchdog value when data is received
 
         // Extract Data from Json to string array
         //        int id = doc["id"];
@@ -120,18 +120,13 @@ void handleNotFound() {
 
 void setup(void) {
   Serial.begin(500000);
-
-  //-------------WIFI--------------------------
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   Serial.println("");
-
-  // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-
   Serial.println("");
   Serial.print("Connected to ");
   Serial.println(ssid);
@@ -157,9 +152,11 @@ void setup(void) {
 
 void loop(void) {
   server.handleClient();
-  //  delay(50); //adjust the delay for lower latency (100ms works good, 500ms is fine, 1000ms is a bit laggy)
-
-
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis;
+    
+  }
 }
 
 void dataPrep() {
