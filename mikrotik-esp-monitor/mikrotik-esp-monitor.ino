@@ -1,22 +1,3 @@
-/*
-  github.com/neogoth/mikrotik-esp-monitor
-
-  Copyright (C) 2021 Neogoth
-
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
 #include <SPI.h>
 #include <Wire.h>
 #include <ESP8266WiFi.h>
@@ -32,8 +13,9 @@ const char* password = "namaguee";
 
 String values[50]; //Set max Array Size
 bool watchdog; //watchdog alternates between true and false every second or so to display the active connection (it stops when there is no Data flowing)
-int clients, temp, volt, rx, tx, cpuLoad;
-float ram;
+int clients, temp, volt, cpuLoad;
+
+float rx, tx, rxMiB, rxGiB, txMiB, txGiB, ram;
 
 ESP8266WebServer server(80); //you can define the Server Port here. Default is 80(HTTP)
 
@@ -73,17 +55,16 @@ void setVars() {
         // Extract Data from Json to string array
         int id = doc["id"];
         String value = doc["value"]; //Extract the Value from Json
-
-        String valueStr;
-        char valueChar[50];
-        value.toCharArray(valueChar, 50);
-        Serial.print("to char array = ");
-
-        Serial.println(valueChar);
+        //
+        //        String valueStr;
+        //        char valueChar[50];
+        //        value.toCharArray(valueChar, 50);
+        //        Serial.print("to char array = ");
+        //
+        //        Serial.println(valueChar);
 
 
         values[id] = value;         //Write the value to the defined place in the array
-        //        values[id] = value.toInt();         //Write the value to the defined place in the array
 
 
         // Create the response
@@ -190,8 +171,8 @@ void loop(void) {
 
   //  String rxStr = values[4].trim();
   //    int rx = (values[4].toInt()/1024)/1024);
-  int rx = values[4].toInt();
-  int tx = values[5].toInt();
+  //  int rx = values[4].toInt();
+  //  int tx = values[5].toInt();
 
   //Write your own Stuff here or modify the Output
   //  Serial.println(values[1]);
@@ -208,22 +189,30 @@ void dataPrep() {
   temp = values[2].toInt();
   volt = values[3].toInt();
 
+  //RX PROCESSING
+  //================================================================
+  //  float rx, tx, rxMiB, rxGiB, txMiB, txGiB, ram;
   String rxStr;
-  //  int str_len = values[4].length() + 1;
-  int str_len = 15;
+//  int str_len = 18;
+  int str_len = values[4].length();
+  Serial.print("length = "); Serial.println(str_len);
   char rxChar[str_len];
   values[4].toCharArray(rxChar, str_len);
-  Serial.println("Doing RX transform");
-  for (int i; i < str_len; i++) {
+  Serial.println();
+  for (int i = 0; i < str_len; i++) {
     if (isDigit(rxChar[i])) {
-      Serial.print("rxChartoInt = ");
+      rxStr += rxChar[i];
+      Serial.print("RX Char = ");
       Serial.println(rxChar[i]);
-      rxStr = + rxChar[i];
     }
   }
-  rx = rxStr.toInt();
+  rx = rxStr.toFloat() / 1000000;
+  Serial.print("Processed RX = ");
+  Serial.println(rx);
+  rxStr = "";
 
-
+  //END OF RX PROCESSING
+  //================================================================
   cpuLoad = values[6].toInt();
   ram = values[7].toFloat() / 1048576;
 }
@@ -236,7 +225,7 @@ void printOutData() {
   Serial.print("Clients     : "); Serial.print(clients);  Serial.println();
   Serial.print("Temp        : "); Serial.print(temp);     Serial.println(" C");
   Serial.print("Volt        : "); Serial.print(volt);     Serial.println(" Volts");
-  Serial.print("WAN RX      : "); Serial.print(rx);       Serial.println(" Bytes");
+  Serial.print("WAN RX      : "); Serial.print(rx);       Serial.println(" GB");
   Serial.print("WAN TX      : "); Serial.print(values[5]); Serial.println(" Bytes");
   Serial.print("CPU Load    : "); Serial.print(cpuLoad);  Serial.println(" %");
   Serial.print("Free RAM    : "); Serial.print(ram);      Serial.println(" MB");
