@@ -194,7 +194,7 @@ void dataPrep() {
   //  float rx, tx, rxMiB, rxGiB, txMiB, txGiB, ram;
   String rxStr;
 //  int str_len = 18;
-  int str_len = values[4].length();
+  int str_len = values[4].length() + 1;
   Serial.print("length = "); Serial.println(str_len);
   char rxChar[str_len];
   values[4].toCharArray(rxChar, str_len);
@@ -206,7 +206,7 @@ void dataPrep() {
       Serial.println(rxChar[i]);
     }
   }
-  rx = rxStr.toFloat() / 1000000;
+  rx = rxStr.toFloat() / 1000000000.00;
   Serial.print("Processed RX = ");
   Serial.println(rx);
   rxStr = "";
