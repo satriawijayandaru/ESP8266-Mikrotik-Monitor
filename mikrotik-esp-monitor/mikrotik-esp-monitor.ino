@@ -9,8 +9,8 @@
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-const char* ssid = "XDA";
-const char* password = "namaguee";
+const char* ssid = "MLA";
+const char* password = "mulatama_2022";
 
 String values[50]; //Maximum data from mikrotik
 int id;
@@ -18,6 +18,7 @@ bool watchdog; //watchdog alternates between true and false every second or so t
 int clients, temp, volt, cpuLoad;
 
 float rx, tx, rxSpeed, currentRx, lastRx, txSpeed, currentTx, lastTx, ram, ramPercent, ramUsage, ramUsagePercent;
+float totalRam = 1024.00;
 
 unsigned long previousMillis = 0;
 const long interval = 50;
@@ -144,7 +145,7 @@ void setup(void) {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
   lcd.setCursor(0, 0);
-  lcd.print("Connected to");
+  lcd.print("Connected to ");
   lcd.print(ssid);
   lcd.setCursor(0, 1);
   lcd.print(WiFi.localIP());
@@ -204,9 +205,9 @@ void dataPrep() {
   }
   if (id == 7) {
     ram = values[7].toFloat() / 1048576;
-    ramUsage = 256.00 - ram;
-    ramPercent = (ram / 256.00) * 100;
-    ramUsagePercent = (ramUsage / 256.00 ) * 100;
+    ramUsage = totalRam - ram;
+    ramPercent = (ram / totalRam) * 100;
+    ramUsagePercent = (ramUsage / totalRam ) * 100;
   }
 }
 
@@ -264,7 +265,7 @@ void printOutData() {
   Serial.print(lcdRxLevel);
   Serial.print(" = ");
   for (int i; i < lcdRxLevel; i++) {
-    Serial.print("#");
+//    Serial.print("#");
   }
   Serial.println();
   
@@ -272,7 +273,7 @@ void printOutData() {
   Serial.print(lcdTxLevel);
   Serial.print(" = ");
   for (int j; j < lcdTxLevel; j++) {
-    Serial.print("#");
+//    Serial.print("#");
   }
   
   Serial.println();
