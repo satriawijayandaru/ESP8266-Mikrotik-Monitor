@@ -5,6 +5,9 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <ArduinoJson.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 const char* ssid = "XDA";
 const char* password = "namaguee";
@@ -19,7 +22,7 @@ float rx, tx, rxSpeed, currentRx, lastRx, txSpeed, currentTx, lastTx, ram, ramPe
 unsigned long previousMillis = 0;
 const long interval = 50;
 
-ESP8266WebServer server(80); 
+ESP8266WebServer server(80);
 
 
 void setVars() {
@@ -51,7 +54,7 @@ void setVars() {
 
         // Here store data or doing operation
 
-                watchdog = !watchdog; //alternate the watchdog value when data is received
+        watchdog = !watchdog; //alternate the watchdog value when data is received
 
         // Extract Data from Json to string array
         //        int id = doc["id"];
@@ -120,18 +123,31 @@ void handleNotFound() {
 
 void setup(void) {
   Serial.begin(500000);
+  lcd.init();
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
+  lcd.backlight();
+  lcd.setCursor(0, 0);
+  lcd.print("Connecting to");
+  lcd.setCursor(0, 1);
+  lcd.print(ssid);
   Serial.println("");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(".");
+    Serial.print("."); \
+    lcd.print(".");
   }
+  lcd.clear();
   Serial.println("");
   Serial.print("Connected to ");
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  lcd.setCursor(0, 0);
+  lcd.print("Connected to");
+  lcd.print(ssid);
+  lcd.setCursor(0, 1);
+  lcd.print(WiFi.localIP());
   delay(1000);
 
   //-------------SERVER------------------------
@@ -155,18 +171,22 @@ void loop(void) {
   unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
-    
+
   }
 }
 
 void dataPrep() {
   //int clients, temp, volt, rx, tx, cpuLoad, ram;
   //float rx, tx, rxSpeed, txSpeed, ram;
-
-  clients = values[1].toInt();
-  temp = values[2].toInt();
-  volt = values[3].toInt();
-
+  if (id == 1) {
+    clients = values[1].toInt();
+  }
+  if (id == 2) {
+    temp = values[2].toInt();
+  }
+  if (id == 3) {
+    volt = values[3].toInt();
+  }
   if (id == 4) {
     rx = floatProcessing(values[4]);
     currentRx = rx;
@@ -179,13 +199,15 @@ void dataPrep() {
     txSpeed = currentTx - lastTx;
     lastTx = currentTx;
   }
-
-  cpuLoad = values[6].toInt();
-  ram = values[7].toFloat() / 1048576;
-  ramUsage = 256.00 - ram;
-  ramPercent = (ram / 256.00) * 100;
-  ramUsagePercent = (ramUsage / 256.00 ) * 100;
-
+  if (id == 6) {
+    cpuLoad = values[6].toInt();
+  }
+  if (id == 7) {
+    ram = values[7].toFloat() / 1048576;
+    ramUsage = 256.00 - ram;
+    ramPercent = (ram / 256.00) * 100;
+    ramUsagePercent = (ramUsage / 256.00 ) * 100;
+  }
 }
 
 float floatProcessing(String data) {
@@ -229,19 +251,41 @@ void printOutData() {
   Serial.print("Free RAM    : "); Serial.print(ram);                      Serial.println(" MB");
   Serial.print("RAM Usage   : "); Serial.print(ramUsage);                 Serial.println(" MB");
   Serial.print("Free Ram %  : "); Serial.print(ramPercent);               Serial.println(" %");
-  Serial.print("Ram usage % : "); Serial.print(ramUsagePercent);          
+  Serial.print("Ram usage % : "); Serial.print(ramUsagePercent);
   Serial.println(" %");
   Serial.print("Uptime      : "); Serial.println(values[8]);
-  //  Serial.println("Clients : " + values[1] + " Clients");    //Display the Value No.1
-  //  Serial.println("Temp    : " + values[2] + " C");//Display the Value No.2
-  //  Serial.println("Volt    : " + values[3] + " V");//Display the Value No.3
-  //  Serial.println("WAN RX d: " + values[4] + " GB");//Display the Value No.4
-  //  Serial.println("WAN TX d: " + values[5] + " GB");//Display the Value No.4
-  //  Serial.println("CPU Load: " + values[6] + " %");//Display the Value No.4
-  //  Serial.println("Free RAM: " + values[7] + " MB");//Display the Value No.4
-  //  Serial.println("Uptime  : " + values[8]);
-  //  Serial.print  ("WAN RX  : "); Serial.print(rx); Serial.println(" GB");
-  //  Serial.print  ("WAN TX  : "); Serial.print(tx); Serial.println(" GB");
 
+  Serial.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+  
+  int lcdRxLevel = map((rxSpeed / 1000000.00), 0, 50, 0, 15);
+  int lcdTxLevel = map((txSpeed / 1000000.00), 0, 50, 0, 15);
+  
+  Serial.print("RX Percent ");
+  Serial.print(lcdRxLevel);
+  Serial.print(" = ");
+  for (int i; i < lcdRxLevel; i++) {
+    Serial.print("#");
+  }
   Serial.println();
+  
+  Serial.print("TX Percent ");
+  Serial.print(lcdTxLevel);
+  Serial.print(" = ");
+  for (int j; j < lcdTxLevel; j++) {
+    Serial.print("#");
+  }
+  
+  Serial.println();
+  Serial.println();
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("RX = ");
+  lcd.print(rxSpeed / 1048576.00);
+  lcd.print(" MB/s");
+
+  lcd.setCursor(0, 1);
+  lcd.print("TX = ");
+  lcd.print(txSpeed / 1048576.00);
+  lcd.print(" MB/s");
 }
