@@ -9,8 +9,8 @@
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-const char* ssid = "MLA";
-const char* password = "mulatama_2022";
+const char* ssid = "SSID";
+const char* password = "PASSWORD";
 
 String values[50]; //Maximum data from mikrotik
 int id;
