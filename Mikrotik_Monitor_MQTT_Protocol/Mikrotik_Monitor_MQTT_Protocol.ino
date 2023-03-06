@@ -1,11 +1,14 @@
 #include <ESP8266WiFi.h>
 #include <EEPROM.h>
+#include <ESP8266mDNS.h>
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 #include "ClickButton.h"
 #include <PubSubClient.h>
 
 WiFiServer server(80);
-ClickButton btn1(btn, LOW, CLICKBTN_PULLUP);
-PubSubClient client(espClient);
+
+
 char* ssid = "";
 char* password = "";
 
@@ -16,7 +19,6 @@ int wifi_password_address = 32;
 const char* ssidAp = "ESP8266 Hotspot";
 const char* passwordAp = "password";
 
-
 String selectedSSID;
 String selectedPassword;
 String storedSSID = "";
@@ -24,6 +26,7 @@ String storedPassword = "";
 
 int btn = 0;
 int btnFunc = 0;
+ClickButton btn1(btn, LOW, CLICKBTN_PULLUP);
 
 const int ledPin = LED_BUILTIN;
 int ledState = LOW;
@@ -33,6 +36,9 @@ int eepromStat;
 
 const char* mqtt_server = "192.168.88.200";
 
+WiFiClient espClient;
+PubSubClient client(espClient);
+
 void setup() {
   pinMode(btn, INPUT);
   pinMode(ledPin, OUTPUT);
@@ -41,60 +47,53 @@ void setup() {
   btn1.longClickTime = 2000;
 
   Serial.begin(115200);
-  EEPROM.begin(64);
-  delay(100);
-  Serial.println();
-  
-  // Check if stored WiFi credentials are present
-  for (int i = 0; i < 32; ++i) {
-    storedSSID += char(EEPROM.read(wifi_ssid_address + i));
-  }
-  for (int i = 0; i < 32; ++i) {
-    storedPassword += char(EEPROM.read(wifi_password_address + i));
-  }
-  Serial.print("Boot Stored SSID = "); Serial.println(storedSSID);
-  Serial.print("Boot Stored Pass = "); Serial.println(storedPassword);
-
-  // If stored WiFi credentials are present, attempt to connect to the network
-  if (storedSSID != "" && storedPassword != "") {
-    eepromStat = 0;
-    WiFi.begin(storedSSID.c_str(), storedPassword.c_str());
-    int i = 0;
-    while (WiFi.status() != WL_CONNECTED && i < 10) {
-      delay(1000);
-      Serial.println("Connecting to stored WiFi network...");
-      i++;
-    }
-  }
-  // If the ESP8266 is not connected to a network, start an Access Point
-  if (WiFi.status() != WL_CONNECTED) {
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP(ssidAp, passwordAp);
-
-    server.begin();
-    Serial.println("Server started");
-    Serial.print("HotSpot IP address: ");
-    Serial.println(WiFi.softAPIP());
-    eepromStat = 1;
-  }
-  Serial.print("EEPROM STAT = ");
-  Serial.println(eepromStat);
+  wifiCredentialCheck();
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
 }
 
 void loop() {
-  ledStatus();
-  btn1.Update();
-  if (btn1.clicks != 0) btnFunc = btn1.clicks;
-  if (btnFunc == -1) {
-    btnFunc = 0;
-    Serial.println("Clearing EEPROM");
-    for (int i = 0 ; i < EEPROM.length() ; i++) {
-      EEPROM.write(i, 0);
-      Serial.println(i);
-    }
-    EEPROM.commit();
+  if (!client.connected()) {
+    reconnect();
   }
+  client.loop();
 
+  ledStatus();
+  resetBtn();
+  wifiSelectGUI();
+}
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Incoming [");
+  Serial.print(topic);
+  Serial.print("] -> ");
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+}
+
+void reconnect() {
+  while (!client.connected()) {
+    Serial.println("Menyambungkan ke MQTT broker");
+    String clientId = "ESP8266Client-";
+    clientId += String(random(0xffff), HEX);
+    if (client.connect(clientId.c_str())) {
+      Serial.println("MQTT broker tersambung");
+      Serial.println("Alamat IP MQTT Broker : ");
+      Serial.println(mqtt_server);
+      client.subscribe("#");
+    } else {
+      Serial.print("Koneksi broker gagal, rc=");
+
+      Serial.println(client.state());
+      Serial.println("Menghubungkan kembali");
+      delay(5000);
+    }
+  }
+}
+
+void wifiSelectGUI() {
   // If not connected to a network, listen for incoming clients
   WiFiClient client = server.available();
   if (!client) {
@@ -158,6 +157,7 @@ void loop() {
           }
         }
         EEPROM.commit();
+        ESP.restart();
 
 
         for (int i = 0; i < 32; ++i) {
@@ -196,6 +196,66 @@ void loop() {
   Serial.println("Client disconnected");
 }
 
+void resetBtn() {
+  btn1.Update();
+  if (btn1.clicks != 0) btnFunc = btn1.clicks;
+  if (btnFunc == -1) {
+    btnFunc = 0;
+    Serial.println("Clearing EEPROM");
+    for (int i = 0 ; i < EEPROM.length() ; i++) {
+      EEPROM.write(i, 0);
+      Serial.println(i);
+    }
+    EEPROM.commit();
+    ESP.restart();
+  }
+}
+
+void wifiCredentialCheck() {
+  EEPROM.begin(64);
+  delay(100);
+  Serial.println();
+
+  // Check if stored WiFi credentials are present
+  for (int i = 0; i < 32; ++i) {
+    storedSSID += char(EEPROM.read(wifi_ssid_address + i));
+  }
+  for (int i = 0; i < 32; ++i) {
+    storedPassword += char(EEPROM.read(wifi_password_address + i));
+  }
+  Serial.print("Boot Stored SSID = "); Serial.println(storedSSID);
+  Serial.print("Boot Stored Pass = "); Serial.println(storedPassword);
+
+  // If stored WiFi credentials are present, attempt to connect to the network
+  if (storedSSID != "" && storedPassword != "") {
+    eepromStat = 0;
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(storedSSID.c_str(), storedPassword.c_str());
+    int i = 0;
+    while (WiFi.status() != WL_CONNECTED && i < 10) {
+      delay(1000);
+      Serial.print("Connecting to stored WiFi network...");
+      Serial.println(storedSSID);
+      i++;
+    }
+  }
+  // If the ESP8266 is not connected to a network, start an Access Point
+  if (WiFi.status() != WL_CONNECTED) {
+    WiFi.mode(WIFI_AP);
+    WiFi.softAP(ssidAp, passwordAp);
+
+    server.begin();
+    Serial.println("Server started");
+    Serial.print("HotSpot IP address: ");
+    Serial.println(WiFi.softAPIP());
+    eepromStat = 1;
+  }
+  Serial.print("EEPROM STAT = ");
+  Serial.println(eepromStat);
+  //  Serial.print("IP ADDRESS = ");
+  //  Serial.println(WiFi.localIP());
+}
+
 void ledStatus(){
   if (eepromStat == 1){
     interval = 250;
@@ -203,7 +263,7 @@ void ledStatus(){
   if (eepromStat == 0){
     interval = 1000;
   }
-  
+
   unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
