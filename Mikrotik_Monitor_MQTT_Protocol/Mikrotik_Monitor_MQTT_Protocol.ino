@@ -39,6 +39,11 @@ const char* mqtt_server = "192.168.88.200";
 WiFiClient espClient;
 PubSubClient client(espClient);
 
+String strMikrotikCPU, strMikrotikRX, strMikrotikTX;
+long intMikrotikCPU;
+double rxFloat, txFloat;
+unsigned long currentTime, previousTime;
+
 void setup() {
   pinMode(btn, INPUT);
   pinMode(ledPin, OUTPUT);
@@ -64,13 +69,50 @@ void loop() {
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Incoming [");
-  Serial.print(topic);
-  Serial.print("] -> ");
-  for (int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
+  //  Serial.print("Incoming [");
+  //  Serial.print(topic);
+  //  Serial.print("] -> ");
+  //  for (int i = 0; i < length; i++) {
+  //    Serial.print((char)payload[i]);
+  //  }
+  //  Serial.println();
+
+  if (strcmp(topic, "mikrotikCPU") == 0) {
+    for (int i = 0; i < length; i++) {
+      strMikrotikCPU += (char)payload[i];
+    }
+    intMikrotikCPU = strMikrotikCPU.toInt();
+    strMikrotikCPU = "";
   }
-  Serial.println();
+
+  if (strcmp(topic, "mikrotikRX") == 0) {
+    currentTime = millis();
+    int time = round(currentTime - previousTime);
+    
+    for (int i = 0; i < length; i++) {
+      if (isDigit((char)payload[i])) {
+        strMikrotikRX += (char)payload[i];
+      }
+    }
+    previousTime = currentTime;
+    rxFloat = strMikrotikRX.toFloat() / (1074000000.0 );
+    Serial.println(time);
+    Serial.print("RX = ");
+    Serial.println(rxFloat,6);
+    strMikrotikRX = "";
+  }
+
+  if (strcmp(topic, "mikrotikTX") == 0) {
+    for (int i = 0; i < length; i++) {
+      if (isDigit((char)payload[i])) {
+        strMikrotikTX += (char)payload[i];
+      }
+    }
+    txFloat = strMikrotikTX.toFloat() / (1074000000.0 );
+    Serial.print("TX = ");
+    Serial.println(txFloat,6);
+    strMikrotikTX = "";
+  }
 }
 
 void reconnect() {
@@ -256,11 +298,11 @@ void wifiCredentialCheck() {
   //  Serial.println(WiFi.localIP());
 }
 
-void ledStatus(){
-  if (eepromStat == 1){
+void ledStatus() {
+  if (eepromStat == 1) {
     interval = 250;
   }
-  if (eepromStat == 0){
+  if (eepromStat == 0) {
     interval = 1000;
   }
 
