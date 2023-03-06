@@ -1,0 +1,28 @@
+# MikroTik send to ESP script
+
+# run this script every 1 - 10 seconds via scheduler (1 second recommended)
+
+:local var1 []
+:local var2 [/system health get temperature]
+:local var3 ([/system health get voltage]/10)
+:local var4 [/interface ethernet get ether1 value-name=driver-rx-byte]
+:local var5 [/interface ethernet get ether1 value-name=driver-tx-byte]
+:local var6 [/system resource get cpu-load]
+:local var7 [/system resource get free-memory]
+:local var8 [/system resource get uptime]
+:local ConnCount1 0
+
+# this line counts the active WiFi clients
+:foreach i in=[/ip dhcp-server lease find] do={ :set ConnCount1 ($ConnCount1 + 1) }
+
+# you can customize this by changing variables or adding more lines
+# please note that the ID in these lines is the position of the value in the string array on the ESP
+
+/iot mqtt publish topic=mikrotikDHCP message="$ConnCount1" broker="Office Butler7000"
+/iot mqtt publish topic=mikrotikTemp message="$var2" broker="Office Butler7000"
+/iot mqtt publish topic=mikrotikVoltage message="$var3" broker="Office Butler7000"
+/iot mqtt publish topic=mikrotikRX message="$var4" broker="Office Butler7000"
+/iot mqtt publish topic=mikrotikTX message="$var5" broker="Office Butler7000"
+/iot mqtt publish topic=mikrotikCPU message="$var6" broker="Office Butler7000"
+/iot mqtt publish topic=mikrotikRAM message="$var7" broker="Office Butler7000"
+/iot mqtt publish topic=mikrotikUpTime message="$var8" broker="Office Butler7000"
