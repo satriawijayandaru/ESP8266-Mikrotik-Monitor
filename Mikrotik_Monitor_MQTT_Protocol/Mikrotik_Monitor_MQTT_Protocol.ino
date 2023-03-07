@@ -41,7 +41,8 @@ PubSubClient client(espClient);
 
 String strMikrotikCPU, strMikrotikRX, strMikrotikTX;
 long intMikrotikCPU;
-double rxFloat, txFloat;
+double rxFloat, txFloat, previousRxFloat, previousTxFloat;
+double speedRx, speedTx;
 unsigned long currentTime, previousTime;
 
 void setup() {
@@ -96,9 +97,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
     previousTime = currentTime;
     rxFloat = strMikrotikRX.toFloat() / (1074000000.0 );
-    Serial.println(time);
-    Serial.print("RX = ");
-    Serial.println(rxFloat,6);
+    speedRx = (strMikrotikRX.toFloat() - previousRxFloat) / 107400.0;
+    previousRxFloat = strMikrotikRX.toFloat();
+    Serial.print("RX Bytes = ");
+    Serial.print(rxFloat, 3);
+    Serial.println(" GB");
+    Serial.print("RX Speed = ");
+    Serial.print(speedRx, 2);
+    Serial.println(" Mbps");
     strMikrotikRX = "";
   }
 
@@ -109,8 +115,15 @@ void callback(char* topic, byte* payload, unsigned int length) {
       }
     }
     txFloat = strMikrotikTX.toFloat() / (1074000000.0 );
-    Serial.print("TX = ");
-    Serial.println(txFloat,6);
+    speedTx = (strMikrotikTX.toFloat() - previousTxFloat) / 107400.0;
+    previousTxFloat = strMikrotikTX.toFloat();
+    Serial.print("TX Bytes = ");
+    Serial.print(txFloat,3);
+    Serial.println(" GB");
+    Serial.print("TX Speed = ");
+    Serial.print(speedTx, 2);
+    Serial.println(" Mbps");
+    Serial.println();
     strMikrotikTX = "";
   }
 }

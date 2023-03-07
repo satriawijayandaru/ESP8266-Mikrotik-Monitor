@@ -9,8 +9,8 @@
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-const char* ssid = "SSID";
-const char* password = "PASSWORD";
+const char* ssid = "MLA";
+const char* password = "mulatama_2022";
 
 String values[50]; //Maximum data from mikrotik
 int id;
@@ -21,7 +21,7 @@ float rx, tx, rxSpeed, currentRx, lastRx, txSpeed, currentTx, lastTx, ram, ramPe
 float totalRam = 1024.00;
 
 unsigned long previousMillis = 0;
-const long interval = 50;
+const long interval = 15;
 
 ESP8266WebServer server(80);
 
@@ -45,13 +45,13 @@ void setVars() {
   } else {
     JsonObject postObj = doc.as<JsonObject>();
 
-    Serial.print(F("HTTP Method: "));
-    Serial.println(server.method());
+//    Serial.print(F("HTTP Method: "));
+//    Serial.println(server.method());
 
     if (server.method() == HTTP_POST) {
       if (postObj.containsKey("value")) {
 
-        Serial.println(F("done."));
+//        Serial.println(F("done."));
 
         // Here store data or doing operation
 
@@ -78,7 +78,7 @@ void setVars() {
 
         server.send(201, F("application/json"), buf);
         Serial.print(F("done."));
-        printOutData();
+//        printOutData();
       } else {
         DynamicJsonDocument doc(512);
         doc["status"] = "KO";
@@ -123,7 +123,7 @@ void handleNotFound() {
 }
 
 void setup(void) {
-  Serial.begin(500000);
+  Serial.begin(115200);
   lcd.init();
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
@@ -169,10 +169,10 @@ void setup(void) {
 
 void loop(void) {
   server.handleClient();
+//  dataPrep();
   unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
-
   }
 }
 
@@ -208,6 +208,7 @@ void dataPrep() {
     ramUsage = totalRam - ram;
     ramPercent = (ram / totalRam) * 100;
     ramUsagePercent = (ramUsage / totalRam ) * 100;
+    printOutData();
   }
 }
 
@@ -224,8 +225,8 @@ float floatProcessing(String data) {
   for (int i = 0; i < str_len; i++) {
     if (isDigit(rxChar[i])) {
       toFloatStr += rxChar[i];
-      //      Serial.print("Received data = ");
-      //      Serial.println(rxChar[i]);
+//            Serial.print("Received data = ");
+//            Serial.println(rxChar[i]);
     }
   }
   return toFloatStr.toFloat();
@@ -237,7 +238,7 @@ float floatProcessing(String data) {
 }
 
 void printOutData() {
-  dataPrep();
+//  dataPrep();
   Serial.println();
   Serial.println("===============================================");
   Serial.print("Millis      : "); Serial.println(millis() / 1000);
