@@ -40,10 +40,10 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 String strMikrotikCPU, strMikrotikRX, strMikrotikTX, strMikrotikTemp;
-String strMikrotikVoltage;
-int cpuUsage, mikrotikTemp, mikrotikVoltage;
+String strMikrotikVoltage, strMikrotikRAM;
+int cpuUsage, mikrotikTemp, mikrotikVoltage, ramAvailPercent;
 double rxFloat, txFloat, previousRxFloat, previousTxFloat;
-double speedRx, speedTx;
+double speedRx, speedTx, ramAvailMB;
 unsigned long currentTime, previousTime;
 
 void setup() {
@@ -158,14 +158,27 @@ void callback(char* topic, byte* payload, unsigned int length) {
       Serial.print("CPU Usage= ");
       Serial.print(cpuUsage );
       Serial.println(" %");
-      Serial.println("===========================");
     }
     strMikrotikCPU = "";
   }
 
-
-
-
+  if (strcmp(topic, "mikrotikRAM") == 0) {
+    for (int i = 0; i < length; i++) {
+      strMikrotikRAM += (char)payload[i];
+    }
+    ramAvailMB = strMikrotikRAM.toInt() / 1049000;
+    ramAvailPercent = ((1024 - ramAvailMB) / 1024.0) * (100);
+    if (debugEn == 1) {
+      Serial.print("RAM Usage= ");
+      Serial.print(ramAvailMB );
+      Serial.println(" MB");
+      Serial.print("RAM Avail= ");
+      Serial.print(ramAvailPercent);
+      Serial.println(" %");
+      Serial.println("===========================");
+    }
+    strMikrotikRAM = "";
+  }
 }
 
 void reconnect() {
