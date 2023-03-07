@@ -8,7 +8,7 @@
 
 WiFiServer server(80);
 
-
+int debugEn = 1;
 char* ssid = "";
 char* password = "";
 
@@ -39,8 +39,9 @@ const char* mqtt_server = "192.168.88.200";
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-String strMikrotikCPU, strMikrotikRX, strMikrotikTX;
-long intMikrotikCPU;
+String strMikrotikCPU, strMikrotikRX, strMikrotikTX, strMikrotikTemp;
+String strMikrotikVoltage;
+int cpuUsage, mikrotikTemp, mikrotikVoltage;
 double rxFloat, txFloat, previousRxFloat, previousTxFloat;
 double speedRx, speedTx;
 unsigned long currentTime, previousTime;
@@ -78,18 +79,36 @@ void callback(char* topic, byte* payload, unsigned int length) {
   //  }
   //  Serial.println();
 
-  if (strcmp(topic, "mikrotikCPU") == 0) {
+  if (strcmp(topic, "mikrotikTemp") == 0) {
     for (int i = 0; i < length; i++) {
-      strMikrotikCPU += (char)payload[i];
+      strMikrotikTemp += (char)payload[i];
     }
-    intMikrotikCPU = strMikrotikCPU.toInt();
-    strMikrotikCPU = "";
+    mikrotikTemp = strMikrotikTemp.toInt();
+    if (debugEn == 1) {
+      Serial.print("Temp     = ");
+      Serial.print(mikrotikTemp);
+      Serial.println(" C");
+    }
+    strMikrotikTemp = "";
+  }
+
+  if (strcmp(topic, "mikrotikVoltage") == 0) {
+    for (int i = 0; i < length; i++) {
+      strMikrotikVoltage += (char)payload[i];
+    }
+    mikrotikVoltage = strMikrotikVoltage.toInt();
+    if (debugEn == 1) {
+      Serial.print("Voltage  = ");
+      Serial.print(mikrotikVoltage);
+      Serial.println(" V");
+    }
+    strMikrotikVoltage = "";
   }
 
   if (strcmp(topic, "mikrotikRX") == 0) {
     currentTime = millis();
     int time = round(currentTime - previousTime);
-    
+
     for (int i = 0; i < length; i++) {
       if (isDigit((char)payload[i])) {
         strMikrotikRX += (char)payload[i];
@@ -99,12 +118,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
     rxFloat = strMikrotikRX.toFloat() / (1074000000.0 );
     speedRx = (strMikrotikRX.toFloat() - previousRxFloat) / 107400.0;
     previousRxFloat = strMikrotikRX.toFloat();
-    Serial.print("RX Bytes = ");
-    Serial.print(rxFloat, 3);
-    Serial.println(" GB");
-    Serial.print("RX Speed = ");
-    Serial.print(speedRx, 2);
-    Serial.println(" Mbps");
+    if (debugEn == 1) {
+      Serial.print("RX Bytes = ");
+      Serial.print(rxFloat, 3);
+      Serial.println(" GB");
+      Serial.print("RX Speed = ");
+      Serial.print(speedRx, 2);
+      Serial.println(" Mbps");
+    }
     strMikrotikRX = "";
   }
 
@@ -117,15 +138,34 @@ void callback(char* topic, byte* payload, unsigned int length) {
     txFloat = strMikrotikTX.toFloat() / (1074000000.0 );
     speedTx = (strMikrotikTX.toFloat() - previousTxFloat) / 107400.0;
     previousTxFloat = strMikrotikTX.toFloat();
-    Serial.print("TX Bytes = ");
-    Serial.print(txFloat,3);
-    Serial.println(" GB");
-    Serial.print("TX Speed = ");
-    Serial.print(speedTx, 2);
-    Serial.println(" Mbps");
-    Serial.println();
+    if (debugEn == 1) {
+      Serial.print("TX Bytes = ");
+      Serial.print(txFloat, 3);
+      Serial.println(" GB");
+      Serial.print("TX Speed = ");
+      Serial.print(speedTx, 2);
+      Serial.println(" Mbps");
+    }
     strMikrotikTX = "";
   }
+
+  if (strcmp(topic, "mikrotikCPU") == 0) {
+    for (int i = 0; i < length; i++) {
+      strMikrotikCPU += (char)payload[i];
+    }
+    cpuUsage = strMikrotikCPU.toInt();
+    if (debugEn == 1) {
+      Serial.print("CPU Usage= ");
+      Serial.print(cpuUsage );
+      Serial.println(" %");
+      Serial.println("===========================");
+    }
+    strMikrotikCPU = "";
+  }
+
+
+
+
 }
 
 void reconnect() {
