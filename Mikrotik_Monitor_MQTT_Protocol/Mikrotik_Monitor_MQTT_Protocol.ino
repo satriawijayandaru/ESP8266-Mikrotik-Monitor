@@ -5,8 +5,10 @@
 #include <ArduinoOTA.h>
 #include "ClickButton.h"
 #include <PubSubClient.h>
+#include <LiquidCrystal_I2C.h>
 
 WiFiServer server(80);
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 int debugEn = 1;
 char* ssid = "";
@@ -34,7 +36,8 @@ unsigned long previousMillis = 0;
 long interval;
 int eepromStat;
 
-const char* mqtt_server = "192.168.88.200";
+//const char* mqtt_server = "192.168.88.200";
+const char* mqtt_server = "11.11.11.111";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -46,15 +49,53 @@ double rxFloat, txFloat, previousRxFloat, previousTxFloat;
 double speedRx, speedTx, ramAvailMB;
 unsigned long currentTime, previousTime;
 
+byte blankChar[] = {
+  0x1F,
+  0x1F,
+  0x1F,
+  0x1F,
+  0x1F,
+  0x1F,
+  0x1F,
+  0x1F
+};
+
+byte rxChar[] = {
+  0x1C,
+  0x14,
+  0x18,
+  0x14,
+  0x00,
+  0x14,
+  0x08,
+  0x14
+};
+
+byte txChar[] = {
+  0x1C,
+  0x08,
+  0x08,
+  0x08,
+  0x00,
+  0x14,
+  0x08,
+  0x14
+};
+
 void setup() {
   pinMode(btn, INPUT);
   pinMode(ledPin, OUTPUT);
   btn1.debounceTime   = 20;   // Debounce timer in ms
   btn1.multiclickTime = 250;
   btn1.longClickTime = 2000;
-
+  lcd.init();
+  lcd.backlight();
+  lcd.createChar(0, blankChar);
+  lcd.createChar(1, rxChar);
+  lcd.createChar(2, txChar);
   Serial.begin(115200);
   wifiCredentialCheck();
+
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
 }
@@ -68,18 +109,64 @@ void loop() {
   ledStatus();
   resetBtn();
   wifiSelectGUI();
+  
+}
+
+void lcdPrint() {
+  //  int rxBar = (speedRx / 60) * 16;
+  //  int txBar = (speedTx / 60) * 16;
+  //
+  //  lcd.setCursor(0, 0);
+  //  for (int i; i < rxBar; i++) {
+  //    lcd.write(0);
+  //  }
+  //  lcd.setCursor(0, 1);
+  //  for (int i; i < txBar; i++) {
+  //    lcd.write(0);
+  //  }
+
+  int rxBar = (speedRx / 60) * 16;
+  int txBar = (speedTx / 60) * 16;
+  if (rxBar > 16) {
+    rxBar = 16;
+  }
+  if (txBar > 16) {
+    txBar = 16;
+  }
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.write(1);
+  for (int i = 0; i < rxBar; i++) {
+    lcd.write(0);
+  }
+  lcd.setCursor(0, 1);
+  lcd.write(2);
+  for (int i = 0; i < txBar; i++) {
+    lcd.write(0);
+  }
+
+  //  lcd.setCursor(0, 0);
+  //  lcd.print(speedRx, 2);
+  //  lcd.setCursor(6, 0);
+  //  lcd.print(speedTx, 2);
+  //
+  //  lcd.setCursor(0, 1);
+  //  lcd.print("CPU ");
+  //  lcd.print(cpuUsage);
+  //  lcd.print(" %");
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
-  //  Serial.print("Incoming [");
-  //  Serial.print(topic);
-  //  Serial.print("] -> ");
-  //  for (int i = 0; i < length; i++) {
-  //    Serial.print((char)payload[i]);
-  //  }
-  //  Serial.println();
+  //    Serial.print("Incoming [");
+  //    Serial.print(topic);
+  //    Serial.print("] -> ");
+  //    for (int i = 0; i < length; i++) {
+  //      Serial.print((char)payload[i]);
+  //    }
+  //    Serial.println();
 
   if (strcmp(topic, "mikrotikTemp") == 0) {
+
     for (int i = 0; i < length; i++) {
       strMikrotikTemp += (char)payload[i];
     }
@@ -118,6 +205,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
     rxFloat = strMikrotikRX.toFloat() / (1074000000.0 );
     speedRx = (strMikrotikRX.toFloat() - previousRxFloat) / 107400.0;
     previousRxFloat = strMikrotikRX.toFloat();
+
+
     if (debugEn == 1) {
       Serial.print("RX Bytes = ");
       Serial.print(rxFloat, 3);
@@ -168,6 +257,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
     ramAvailMB = strMikrotikRAM.toInt() / 1049000;
     ramAvailPercent = ((1024 - ramAvailMB) / 1024.0) * (100);
+    lcdPrint();
     if (debugEn == 1) {
       Serial.print("RAM Usage= ");
       Serial.print(ramAvailMB );
@@ -182,21 +272,23 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
 
 void reconnect() {
-  while (!client.connected()) {
-    Serial.println("Menyambungkan ke MQTT broker");
-    String clientId = "ESP8266Client-";
-    clientId += String(random(0xffff), HEX);
-    if (client.connect(clientId.c_str())) {
-      Serial.println("MQTT broker tersambung");
-      Serial.println("Alamat IP MQTT Broker : ");
-      Serial.println(mqtt_server);
-      client.subscribe("#");
-    } else {
-      Serial.print("Koneksi broker gagal, rc=");
+  if (WiFi.status() == WL_CONNECTED) {
+    while (!client.connected()) {
+      Serial.println("Menyambungkan ke MQTT broker");
+      String clientId = "ESP8266Client-";
+      clientId += String(random(0xffff), HEX);
+      if (client.connect(clientId.c_str())) {
+        Serial.println("MQTT broker tersambung");
+        Serial.println("Alamat IP MQTT Broker : ");
+        Serial.println(mqtt_server);
+        client.subscribe("#");
+      } else {
+        Serial.print("Koneksi broker gagal, rc=");
 
-      Serial.println(client.state());
-      Serial.println("Menghubungkan kembali");
-      delay(5000);
+        Serial.println(client.state());
+        Serial.println("Menghubungkan kembali");
+        delay(5000);
+      }
     }
   }
 }
@@ -344,6 +436,10 @@ void wifiCredentialCheck() {
       delay(1000);
       Serial.print("Connecting to stored WiFi network...");
       Serial.println(storedSSID);
+      lcd.setCursor(0, 0);
+      lcd.print("Connecting to");
+      lcd.setCursor(0, 1);
+      lcd.print(storedSSID.c_str());
       i++;
     }
   }
@@ -356,6 +452,10 @@ void wifiCredentialCheck() {
     Serial.println("Server started");
     Serial.print("HotSpot IP address: ");
     Serial.println(WiFi.softAPIP());
+    lcd.setCursor(0, 0);
+    lcd.print("For setup go to");
+    lcd.setCursor(0, 1);
+    lcd.print(WiFi.softAPIP());
     eepromStat = 1;
   }
   Serial.print("EEPROM STAT = ");
