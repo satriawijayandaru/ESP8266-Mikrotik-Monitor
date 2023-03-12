@@ -106,10 +106,10 @@ void loop() {
   }
   client.loop();
 
-  ledStatus();
+  stat();
   resetBtn();
   wifiSelectGUI();
-  
+
 }
 
 void lcdPrint() {
@@ -121,38 +121,34 @@ void lcdPrint() {
   if (txBar > 16) {
     txBar = 16;
   }
-//  lcd.clear();
-//  lcd.setCursor(0, 0);
-//  lcd.write(1);
-//  for (int i = 0; i < rxBar; i++) {
-//    lcd.write(0);
-//  }
-//  lcd.setCursor(0, 1);
-//  lcd.write(2);
-//  for (int i = 0; i < txBar; i++) {
-//    lcd.write(0);
-//  }
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.write(1);
-    lcd.print(speedRx, 2);
-    lcd.setCursor(8, 0);
-    lcd.write(2);
-    lcd.print(speedTx, 2);
-    lcd.print(" M");
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.write(1);
+  lcd.print(speedRx, 3);
+  lcd.setCursor(8, 0);
+  lcd.write(2);
+  lcd.print(speedTx, 3);
+  lcd.setCursor(15, 0);
+  lcd.print("M");
 
-    lcd.setCursor(0, 1);
-    lcd.write(1);
+  lcd.setCursor(0, 1);
+  lcd.write(1);
+  if (rxFloat > 100.0) {
+    lcd.print(rxFloat, 1);
+  }
+  if (rxFloat < 100.0) {
     lcd.print(rxFloat, 2);
-    lcd.setCursor(8, 1);
-    lcd.write(2);
+  }
+  lcd.setCursor(8, 1);
+  lcd.write(2);
+  if (txFloat > 100.0) {
+    lcd.print(txFloat, 1);
+  }
+  if (txFloat < 100.0) {
     lcd.print(txFloat, 2);
-    lcd.print(" G");
-    
-//    lcd.setCursor(0, 1);
-//    lcd.print("CPU ");
-//    lcd.print(cpuUsage);
-//    lcd.print(" %");
+  }
+  lcd.setCursor(15,1);
+  lcd.print("G");
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -255,13 +251,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
       strMikrotikRAM += (char)payload[i];
     }
     ramAvailMB = strMikrotikRAM.toInt() / 1049000;
-    ramAvailPercent = ((1024 - ramAvailMB) / 1024.0) * (100);
+    ramAvailPercent = ((256 - ramAvailMB) / 256.0) * (100);
     lcdPrint();
     if (debugEn == 1) {
-      Serial.print("RAM Usage= ");
+      Serial.print("RAM Free = ");
       Serial.print(ramAvailMB );
       Serial.println(" MB");
-      Serial.print("RAM Avail= ");
+      Serial.print("RAM Usage= ");
       Serial.print(ramAvailPercent);
       Serial.println(" %");
       Serial.println("===========================");
@@ -280,12 +276,18 @@ void reconnect() {
         Serial.println("MQTT broker tersambung");
         Serial.println("Alamat IP MQTT Broker : ");
         Serial.println(mqtt_server);
+        
         client.subscribe("#");
       } else {
         Serial.print("Koneksi broker gagal, rc=");
 
         Serial.println(client.state());
         Serial.println("Menghubungkan kembali");
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("Connecting To");
+        lcd.setCursor(0,1);
+        lcd.print(mqtt_server);
         delay(5000);
       }
     }
@@ -463,13 +465,14 @@ void wifiCredentialCheck() {
   //  Serial.println(WiFi.localIP());
 }
 
-void ledStatus() {
+void stat() {
   if (eepromStat == 1) {
     interval = 250;
   }
   if (eepromStat == 0) {
     interval = 1000;
   }
+  int displayAlter;
 
   unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval) {
