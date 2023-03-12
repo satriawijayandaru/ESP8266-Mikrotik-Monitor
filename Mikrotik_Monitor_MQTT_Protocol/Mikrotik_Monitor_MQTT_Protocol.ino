@@ -113,18 +113,6 @@ void loop() {
 }
 
 void lcdPrint() {
-  //  int rxBar = (speedRx / 60) * 16;
-  //  int txBar = (speedTx / 60) * 16;
-  //
-  //  lcd.setCursor(0, 0);
-  //  for (int i; i < rxBar; i++) {
-  //    lcd.write(0);
-  //  }
-  //  lcd.setCursor(0, 1);
-  //  for (int i; i < txBar; i++) {
-  //    lcd.write(0);
-  //  }
-
   int rxBar = (speedRx / 60) * 16;
   int txBar = (speedTx / 60) * 16;
   if (rxBar > 16) {
@@ -133,27 +121,38 @@ void lcdPrint() {
   if (txBar > 16) {
     txBar = 16;
   }
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.write(1);
-  for (int i = 0; i < rxBar; i++) {
-    lcd.write(0);
-  }
-  lcd.setCursor(0, 1);
-  lcd.write(2);
-  for (int i = 0; i < txBar; i++) {
-    lcd.write(0);
-  }
+//  lcd.clear();
+//  lcd.setCursor(0, 0);
+//  lcd.write(1);
+//  for (int i = 0; i < rxBar; i++) {
+//    lcd.write(0);
+//  }
+//  lcd.setCursor(0, 1);
+//  lcd.write(2);
+//  for (int i = 0; i < txBar; i++) {
+//    lcd.write(0);
+//  }
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.write(1);
+    lcd.print(speedRx, 2);
+    lcd.setCursor(8, 0);
+    lcd.write(2);
+    lcd.print(speedTx, 2);
+    lcd.print(" M");
 
-  //  lcd.setCursor(0, 0);
-  //  lcd.print(speedRx, 2);
-  //  lcd.setCursor(6, 0);
-  //  lcd.print(speedTx, 2);
-  //
-  //  lcd.setCursor(0, 1);
-  //  lcd.print("CPU ");
-  //  lcd.print(cpuUsage);
-  //  lcd.print(" %");
+    lcd.setCursor(0, 1);
+    lcd.write(1);
+    lcd.print(rxFloat, 2);
+    lcd.setCursor(8, 1);
+    lcd.write(2);
+    lcd.print(txFloat, 2);
+    lcd.print(" G");
+    
+//    lcd.setCursor(0, 1);
+//    lcd.print("CPU ");
+//    lcd.print(cpuUsage);
+//    lcd.print(" %");
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
